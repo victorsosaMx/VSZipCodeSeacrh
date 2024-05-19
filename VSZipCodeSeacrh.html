@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Formulario de Código Postal</title>
+
+        <!-- Incluyendo Bootstrap para el estilo del formulario -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0" crossorigin="anonymous">
+        
+        <!-- Incluyendo una hoja de estilos personalizada -->
+        <link rel="stylesheet" href="style.css">
+
+        <script>
+            // Función para buscar información del código postal (CP) ingresado
+            function lookupCP(event) {
+                const cpInput = document.getElementById('cp');
+                const cp = cpInput.value.trim();
+                
+                // Verificar que el código postal tenga exactamente 5 dígitos
+                if (cp.length !== 5) {
+                    clearFields();
+                    return;
+                }
+                
+                // Utilizar el token propio para la API de copomex
+                const token = 'pruebas'; // Cambiar 'pruebas' por el token propio
+                const apiUrl = `https://api.copomex.com/query/info_cp/${cp}?token=${token}`;
+                
+                // Realizar la llamada a la API
+                fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        clearFields();
+                        return;
+                    }
+
+                    const validResponses = data.filter(item => !item.error);
+
+                    if (validResponses.length === 0) {
+                        clearFields();
+                        return;
+                    }
+
+                    const asentamientoSelect = document.getElementById('asentamiento');
+                    asentamientoSelect.innerHTML = '';
+
+                    // Extraer y filtrar asentamientos únicos
+                    const asentamientos = validResponses.map(item => item.response.asentamiento);
+                    const uniqueAsentamientos = [...new Set(asentamientos)];
+
+                    // Añadir la opción "Otro" al select de asentamientos
+                    const otroOption = document.createElement('option');
+                    otroOption.value = 'otro';
+                    otroOption.text = 'Otro';
+                    asentamientoSelect.add(otroOption);
+
+                    // Añadir las opciones de asentamientos al select
+                    for (const asentamiento of uniqueAsentamientos) {
+                        const option = document.createElement('option');
+                        option.value = asentamiento;
+                        option.text = asentamiento;
+                        asentamientoSelect.add(option);
+                    }
+
+                    const asentamientoInput = document.getElementById('asentamientoInput');
+                    asentamientoInput.disabled = true;
+                    asentamientoInput.value = '';
+
+                    // Manejar el cambio en el select de asentamientos
+                    asentamientoSelect.addEventListener('change', () => {
+                        if (asentamientoSelect.value === 'otro') {
+                            asentamientoInput.disabled = false;
+                            asentamientoInput.value = '';
+                            asentamientoInput.focus();
+                        } else {
+                            asentamientoInput.disabled = true;
+                            updateFields(cp, validResponses, asentamientoSelect.value);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    clearFields();
+                });
+            }
+
+            // Función para actualizar los campos del formulario con la información obtenida
+            function updateFields(cp, validResponses, selectedAsentamiento) {
+                if (!selectedAsentamiento) {
+                    clearFields();
+                    return;
+                }
+
+                const selectedResponse = validResponses.find(item => item.response.asentamiento === selectedAsentamiento);
+
+                if (!selectedResponse) {
+                    clearFields();
+                    return;
+                }
+
+                const result = selectedResponse.response;
+
+                // Actualizar los campos del formulario
+                document.getElementById('tipo_asentamiento').value = result.tipo_asentamiento;
+                document.getElementById('municipio').value = result.municipio;
+                document.getElementById('estado').value = result.estado;
+                document.getElementById('ciudad').value = result.ciudad;
+                document.getElementById('pais').value = result.pais;
+            }
+
+            // Función para limpiar los campos del formulario
+            function clearFields() {
+                const asentamientoSelect = document.getElementById('asentamiento');
+                asentamientoSelect.innerHTML = '';
+
+                const asentamientoInput = document.getElementById('asentamientoInput');
+                asentamientoInput.disabled = true;
+                asentamientoInput.value = '';
+
+                document.getElementById('tipo_asentamiento').value = '';
+                document.getElementById('municipio').value = '';
+                document.getElementById('estado').value = '';
+                document.getElementById('ciudad').value = '';
+                document.getElementById('pais').value = '';
+            }
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Formulario de Código Postal</h1>
+            <form>
+                <label for="cp">Código Postal:</label>
+                <input type="text" id="cp" maxlength="5" onkeyup="lookupCP(event)" placeholder="Ingresa el código postal">
+
+                <label for="asentamiento">Asentamiento:</label>
+                <select id="asentamiento" class="form-select"></select>
+                <input type="text" id="asentamientoInput" >
+
+                <label for="tipo_asentamiento">Tipo de Asentamiento:</label>
+                <input type="text" id="tipo_asentamiento" >
+
+                <label for="municipio">Municipio:</label>
+                <input type="text" id="municipio" >
+
+                <label for="estado">Estado:</label>
+                <input type="text" id="estado" >
+
+                <label for="ciudad">Ciudad:</label>
+                <input type="text" id="ciudad" >
+
+                <label for="pais">País:</label>
+                <input type="text" id="pais" >
+            </form>
+        </div>
+    </body>
+</html>
